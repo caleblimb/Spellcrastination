@@ -19,7 +19,7 @@ class Game : AppCompatActivity {
     var currentPlayer: Int = 0
 
     constructor() {
-        this.players = 2
+        this.players = 6
     }
 
     constructor(players: Int) {
@@ -31,6 +31,7 @@ class Game : AppCompatActivity {
         setContentView(R.layout.activity_game)
 
         val message = findViewById<TextView>(R.id.textView_message)
+        message.text = currentPlayer().toString().plus(":\n Enter a letter")
 
         var isChallenging: Boolean = false
 
@@ -59,29 +60,33 @@ class Game : AppCompatActivity {
         val buttonCompleted = findViewById<Button>(R.id.button_completed)
         buttonCompleted?.setOnClickListener()
         {
-            message.text = "Enter a letter"
-            val message = AlertDialog.Builder(this@Game)
-
             val word = letters.text.toString()
+            if (word.length > 3) {
+                advancePlayer()
+                message.text = currentPlayer().toString().plus(":\n Enter a letter")
 
-            if (dictionary.isWord(word)) {
-                message.setTitle(word.plus(" is a word!"))
-                message.setMessage("The Previous Player Loses")
-            } else {
-                message.setTitle(word.plus(" is NOT a word!"))
-                message.setMessage("The current Player Loses")
-            }
+                val message = AlertDialog.Builder(this@Game)
 
-            message.setPositiveButton("Continue") { dialog, which ->
+
+                if (dictionary.isWord(word)) {
+                    message.setTitle(word.plus(" is a word!"))
+                    message.setMessage(previousPlayer().plus("Player Loses"))
+                } else {
+                    message.setTitle(word.plus(" is NOT a word!"))
+                    message.setMessage(currentPlayer().plus("The current Player Loses"))
+                }
+
+                message.setPositiveButton("Continue") { dialog, which ->
+                }
+                val dialog: AlertDialog = message.create()
+                dialog.show()
             }
-            val dialog: AlertDialog = message.create()
-            dialog.show()
         }
 
         val buttonChallenge = findViewById<Button>(R.id.button_challenge)
         buttonChallenge?.setOnClickListener()
         {
-            message.text = previousPlayer().toString().plus("\nComplete a word")
+            message.text = previousPlayer().toString().plus(":\nComplete a word")
             isChallenging = true
             nextLetter.filters =
                 arrayOf<InputFilter>(InputFilter.LengthFilter(10), InputFilter.AllCaps())
@@ -96,43 +101,52 @@ class Game : AppCompatActivity {
                     val letter = input[input.length - 1]
                     letters.text = letters.text.toString().plus(letter)
                     nextLetter.text.clear()
+                    advancePlayer()
+                    message.text = currentPlayer().toString().plus(":\n Enter a letter")
                 } else {
-                    message.text = "Enter a letter"
-                    val message = AlertDialog.Builder(this@Game)
+
+                    val dialogMessage = AlertDialog.Builder(this@Game)
 
                     val word = letters.text.toString().plus(input)
 
                     if (dictionary.isWord(word)) {
-                        message.setTitle(word.plus(" is a word!"))
-                        message.setMessage("The Previous Player Loses")
+                        dialogMessage.setTitle(word.plus(" is a word!"))
+                        dialogMessage.setMessage(previousPlayer().toString().plus("The Previous Player Loses"))
                     } else {
-                        message.setTitle(word.plus(" is NOT a word!"))
-                        message.setMessage("The current Player Loses")
+                        dialogMessage.setTitle(word.plus(" is NOT a word!"))
+                        dialogMessage.setMessage(currentPlayer().toString().plus("The current Player Loses"))
                     }
 
-                    message.setPositiveButton("Continue") { dialog, which ->
+                    dialogMessage.setPositiveButton("Continue") { dialog, which ->
                     }
-                    val dialog: AlertDialog = message.create()
+                    val dialog: AlertDialog = dialogMessage.create()
                     dialog.show()
 
                     isChallenging = false
                     letters.text = ""
                     nextLetter.text.clear()
+
+                    advancePlayer()
+                    message.text = currentPlayer().toString().plus(":\n Enter a letter")
                 }
             }
         }
     }
-    fun nextPlayer() : Int {
-        return (currentPlayer + 1) % players
+    fun nextPlayer() : String {
+        return "Player ".plus(((currentPlayer + 1) % players).toString())
     }
-    fun currentPlayer() : Int {
-        return currentPlayer
+    fun currentPlayer() : String {
+        return "Player ".plus(currentPlayer.toString())
     }
-    fun previousPlayer() : Int {
-        return (currentPlayer - 1 ) % players
+    fun previousPlayer() : String {
+        val p = (currentPlayer - 1 ) % players
+        if (p == -1) {
+            return (players -1).toString()
+        }
+        return "Player ".plus(((currentPlayer - 1 ) % players).toString())
     }
     fun advancePlayer() {
-        currentPlayer = nextPlayer()
+        currentPlayer = (currentPlayer + 1) % players
     }
 
     fun openSoftKeyboard(view: View) {

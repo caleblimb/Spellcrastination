@@ -15,7 +15,7 @@ class Dictionary(context: Context) {
         // String to hold file
         var string: String = ""
         // Each line is a single word
-        val delimiter = "\n"
+        val delimiter = "\r\n"
         try {
             // Open and Real File
             val inputStream: InputStream = context.assets.open(fileName)
