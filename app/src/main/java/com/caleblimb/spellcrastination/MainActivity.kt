@@ -27,8 +27,6 @@ class MainActivity : AppCompatActivity() {
         val context = this
 
         if (playerSpinner != null) {
-//            val adapter = ArrayAdapter( this, android.R.layout.simple_spinner_item, playerSpinner)
-//            playerSpinner.adapter = adapter
             playerSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(
                     parent: AdapterView<*>?,
@@ -55,13 +53,10 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-
                 override fun onNothingSelected(p0: AdapterView<*>?) {
-                    TODO("Not yet implemented")
                 }
             }
         }
-
 
         startButton?.setOnClickListener()
         {
