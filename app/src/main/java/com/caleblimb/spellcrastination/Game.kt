@@ -1,7 +1,11 @@
 package com.caleblimb.spellcrastination
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
 import android.text.InputFilter
+import android.text.TextWatcher
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -9,10 +13,11 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.caleblimb.scrabblelookup.Dictionary
 
 class Game : AppCompatActivity() {
-    private var players: ArrayList<String>? = null
+    private var players: MutableList<String>? = null
     private var playerCount: Int = 0
     private var previousPlayer: Int = 0
     private var currentPlayer: Int = 0
@@ -20,6 +25,9 @@ class Game : AppCompatActivity() {
     private lateinit var messageView: TextView
     private lateinit var nextLetterView: EditText
     private lateinit var lettersView: TextView
+    private lateinit var buttonCompleted: Button
+    private lateinit var buttonChallenge: Button
+    private lateinit var buttonSubmitLetter: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,9 +37,9 @@ class Game : AppCompatActivity() {
         nextLetterView = findViewById<EditText>(R.id.editTextNextLetter)
         lettersView = findViewById<TextView>(R.id.textView_word)
         val dictionary: Dictionary = Dictionary(this)
-        val buttonCompleted: Button = findViewById<Button>(R.id.button_completed)
-        val buttonChallenge: Button = findViewById<Button>(R.id.button_challenge)
-        val buttonSubmitLetter: ImageButton = findViewById<ImageButton>(R.id.imageButton_submit)
+        buttonCompleted = findViewById<Button>(R.id.button_completed)
+        buttonChallenge = findViewById<Button>(R.id.button_challenge)
+        buttonSubmitLetter = findViewById<ImageButton>(R.id.imageButton_submit)
 
         onBackPressedDispatcher.addCallback(
             this,
@@ -42,27 +50,45 @@ class Game : AppCompatActivity() {
             }
         )
 
-        players = intent.getStringArrayListExtra("PLAYERS")
+        players = intent.getStringArrayListExtra("PLAYERS")?.toMutableList()
         initGame()
 
         nextLetterView.setPadding(8, 2, 8, 2)
+
+        nextLetterView.addTextChangedListener(object : TextWatcher {
+
+            override fun afterTextChanged(s: Editable) {}
+
+            override fun beforeTextChanged(s: CharSequence, start: Int,
+                                           count: Int, after: Int) {
+            }
+
+            override fun onTextChanged(s: CharSequence, start: Int,
+                                       before: Int, count: Int) {
+                if (nextLetterView.text.any{!it.isWhitespace()}) {
+                    enableButton(buttonSubmitLetter)
+                } else {
+                    disableButton(buttonSubmitLetter)
+                }
+            }
+        })
 
         buttonCompleted.setOnClickListener()
         {
             val word = lettersView.text.toString()
             if (word.length > 3) {
                 if (dictionary.isWord(word)) {
+                    eliminatePlayer(previousPlayer)
                     showDialog(
                         word.plus(" is a word!"),
                         previousPlayer().plus(" is eliminated!")
                     )
-                    eliminatePlayer(previousPlayer)
                 } else {
+                    eliminatePlayer(currentPlayer)
                     showDialog(
                         word.plus(" is NOT a word!"),
                         currentPlayer().plus(" is eliminated!")
                     )
-                    eliminatePlayer(currentPlayer)
                 }
                 initGame()
             }
@@ -72,6 +98,8 @@ class Game : AppCompatActivity() {
         {
             val word = lettersView.text.toString()
             if (word.length > 1) {
+                disableButton(buttonCompleted)
+                disableButton(buttonChallenge)
                 messageView.text = previousPlayer().plus("\nComplete a word")
                 isChallenging = true
                 nextLetterView.filters =
@@ -91,23 +119,47 @@ class Game : AppCompatActivity() {
                 } else {
                     val word = lettersView.text.toString().plus(input)
                     if (dictionary.isWord(word)) {
+                        eliminatePlayer(currentPlayer)
                         showDialog(
                             word.plus(" is a word!"),
                             currentPlayer().plus(" is eliminated!")
                         )
-                        eliminatePlayer(currentPlayer)
                     } else {
+                        eliminatePlayer(previousPlayer)
                         showDialog(
                             word.plus(" is NOT a word!"),
                             previousPlayer().plus(" is eliminated!")
                         )
-                        eliminatePlayer(previousPlayer)
                     }
                     advancePlayer()
                     initGame()
                 }
             }
         }
+    }
+
+    fun disableButton(button: ImageButton) {
+        button.isEnabled = false
+        button.isClickable = false
+        button.backgroundTintList = ColorStateList.valueOf(Color.GRAY);
+    }
+
+    fun enableButton(button: ImageButton){
+        button.isEnabled = true
+        button.isClickable = true
+        button.backgroundTintList = ColorStateList.valueOf(Color.rgb(85,238,85));
+    }
+
+    fun disableButton(button: Button) {
+        button.isEnabled = false
+        button.isClickable = false
+        button.backgroundTintList = ColorStateList.valueOf(Color.GRAY);
+    }
+
+    fun enableButton(button: Button){
+        button.isEnabled = true
+        button.isClickable = true
+        button.backgroundTintList = ColorStateList.valueOf(Color.rgb(85,238,85));
     }
 
     fun currentPlayer(): String {
@@ -122,9 +174,18 @@ class Game : AppCompatActivity() {
         previousPlayer = currentPlayer
         currentPlayer = (currentPlayer + 1) % playerCount
         messageView.text = currentPlayer().plus("\nEnter a letter")
+        if (lettersView.text.length > 3) {
+            enableButton(buttonCompleted)
+        }
+        if (lettersView.text.length > 1) {
+            enableButton(buttonChallenge)
+        }
     }
 
     fun initGame() {
+        disableButton(buttonCompleted)
+        disableButton(buttonChallenge)
+        disableButton(buttonSubmitLetter)
         playerCount = players!!.size
         isChallenging = false
         messageView.text = currentPlayer().plus("\nEnter a letter")
@@ -134,21 +195,26 @@ class Game : AppCompatActivity() {
             arrayOf<InputFilter>(InputFilter.LengthFilter(1), InputFilter.AllCaps())
     }
 
-    fun showDialog(title: String, message: String) {
+    fun showDialog(title: String, message: String, finish: Boolean = false) {
         val alert = AlertDialog.Builder(this@Game)
 
         alert.setTitle(title)
         alert.setMessage(message)
 
         alert.setPositiveButton("Continue") { _dialog, _which ->
+            if (finish) {
+                finish()
+            }
         }
         val dialog: AlertDialog = alert.create()
         dialog.show()
     }
 
     fun eliminatePlayer(player: Int) {
-        players?.drop(player)
+//        players?.drop(player)
+        players?.removeAt(player)
         playerCount--
+        advancePlayer()
         if (playerCount == 1) {
             val p = players?.get(0)
             showDialog(p.plus(" Wins!"), p.plus(" was the last survivor."))
